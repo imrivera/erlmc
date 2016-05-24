@@ -77,13 +77,24 @@ handle_call({get, Key}, _From, Socket) ->
 		        _ -> {reply, <<>>, Socket}
 		    end
 	end;
+
+handle_call({get_with_status, Key}, _From, Socket) ->
+    case send_recv(Socket, #request{op_code=?OP_GetK, key=list_to_binary(Key)}) of
+		{error, Err} ->
+			{stop, Err, {error, Err}, Socket};
+		#response{key=Key1} = Response ->
+    		case binary_to_list(Key1) of
+		        Key -> {reply, generate_response_status(Response), Socket};
+		        _ -> {reply, {error, not_found, <<>>}, Socket}
+		    end
+	end;
     
 handle_call({add, Key, Value, Expiration}, _From, Socket) ->
     case send_recv(Socket, #request{op_code=?OP_Add, extras = <<16#deadbeef:32, Expiration:32>>, key=list_to_binary(Key), value=Value}) of
 		{error, Err} ->
 			{stop, Err, {error, Err}, Socket};
 		Resp ->
-    		{reply, Resp#response.value, Socket}
+    		{reply, generate_response_status(Resp), Socket}
 	end;
     
 handle_call({set, Key, Value, Expiration}, _From, Socket) ->
@@ -92,6 +103,14 @@ handle_call({set, Key, Value, Expiration}, _From, Socket) ->
 			{stop, Err, {error, Err}, Socket};
 		Resp ->
     		{reply, Resp#response.value, Socket}
+	end;
+
+handle_call({cas, Key, Value, CAS, Expiration}, _From, Socket) ->
+	case send_recv(Socket, #request{op_code=?OP_Set, extras = <<16#deadbeef:32, Expiration:32>>, key=list_to_binary(Key), cas = CAS, value=Value}) of
+		{error, Err} ->
+			{stop, Err, {error, Err}, Socket};
+		Resp ->
+			{reply, generate_response_status(Resp), Socket}
 	end;
 
 handle_call({replace, Key, Value, Expiration}, _From, Socket) ->
@@ -301,3 +320,26 @@ recv_bytes(Socket, NumBytes) ->
         {ok, Bin} -> Bin;
         Err -> Err
     end.
+
+generate_response_status(#response{status = ?STATUS_Success, cas = CAS, value = Value}) ->
+	{ok, CAS, Value};
+generate_response_status(#response{status = ?STATUS_KeyNotFound, value = Value}) ->
+	{error, not_found, Value};
+generate_response_status(#response{status = ?STATUS_KeyExists, value = Value}) ->
+	{error, key_exists, Value};
+generate_response_status(#response{status = ?STATUS_TooBig, value = Value}) ->
+	{error, too_big, Value};
+generate_response_status(#response{status = ?STATUS_NotStored, value = Value}) ->
+	{error, not_stored, Value};
+generate_response_status(#response{status = ?STATUS_DeltaBadVal, value = Value}) ->
+	{error, delta_bad_value, Value};
+generate_response_status(#response{status = ?STATUS_AuthError, value = Value}) ->
+	{error, auth_error, Value};
+generate_response_status(#response{status = ?STATUS_AuthContinue, value = Value}) ->
+	{auth_continue, Value};
+generate_response_status(#response{status = ?STATUS_UnknownCommand, value = Value}) ->
+	{error, unknown_command, Value};
+generate_response_status(#response{status = ?STATUS_ENoMemory, value = Value}) ->
+	{error, no_memory, Value};
+generate_response_status(#response{status = Status, value = Value}) ->
+	{error, {unknown, Status}, Value}.

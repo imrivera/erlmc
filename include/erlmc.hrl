@@ -17,5 +17,17 @@
 -define(OP_Prepend,   16#0F).
 -define(OP_Stat,      16#10).
 
+-define(STATUS_Success,        16#00).
+-define(STATUS_KeyNotFound,    16#01).
+-define(STATUS_KeyExists,      16#02).
+-define(STATUS_TooBig,         16#03).
+-define(STATUS_Invalid,        16#04).
+-define(STATUS_NotStored,      16#05).
+-define(STATUS_DeltaBadVal,    16#06).
+-define(STATUS_AuthError,      16#20).
+-define(STATUS_AuthContinue,   16#21).
+-define(STATUS_UnknownCommand, 16#81).
+-define(STATUS_ENoMemory,      16#82).
+
 -record(request, {op_code, data_type=16#00, reserved=16#00, opaque=16#00, cas=16#00, extras = <<>>, key = <<>>, value = <<>>}).
 -record(response, {op_code, data_type, status, opaque, cas, extras, key, value, key_size, extras_size, body_size}).

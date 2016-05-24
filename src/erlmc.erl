@@ -31,10 +31,11 @@
          add_connection/2, remove_connection/2]).
 
 %% api callbacks
--export([get/1, get_many/1, add/2, add/3, set/2, set/3, 
-		 replace/2, replace/3, delete/1, increment/4, decrement/4,
-		 append/2, prepend/2, stats/0, stats/2, flush/0, flush/1, quit/0, 
-		 version/0]).
+-export([get/1, get_many/1, get_with_status/1, get_many_with_status/1,
+		 add/2, add/3, add_with_status/2, add_with_status/3, set/2,
+		 set/3, cas/3, cas/4, replace/2, replace/3, delete/1,
+		 increment/4, decrement/4, append/2, prepend/2, stats/0,
+		 stats/2, flush/0, flush/1, quit/0, version/0]).
 
 -include("erlmc.hrl").
 
@@ -103,13 +104,40 @@ get_many(Keys) ->
 				Acc
 			end
 		end, [], Pids)).
+
+get_with_status(Key0) ->
+	Key = package_key(Key0),
+	call(map_key(Key), {get_with_status, Key}, ?TIMEOUT).
+
+get_many_with_status(Keys) ->
+	Self = self(),
+	Pids = [spawn(fun() ->
+		Res = (catch ?MODULE:get_with_status(Key)),
+		Self ! {self(), {Key, Res}}
+	 end) || Key <- Keys],
+	lists:reverse(lists:foldl(
+		fun(Pid, Acc) ->
+			receive
+				{Pid, {Key, Res}} -> [{Key, Res}|Acc]
+			after ?TIMEOUT ->
+				Acc
+			end
+		end, [], Pids)).
     
 add(Key, Value) ->
-	add(Key, Value, 0).
+	{_, _, RespValue} = add_with_status(Key, Value),
+	RespValue.
 	
-add(Key0, Value, Expiration) when is_binary(Value), is_integer(Expiration) ->
+add(Key, Value, Expiration) when is_binary(Value), is_integer(Expiration) ->
+	{_, _, RespValue} = add_with_status(Key, Value, Expiration),
+	RespValue.
+
+add_with_status(Key, Value) ->
+	add_with_status(Key, Value, 0).
+
+add_with_status(Key0, Value, Expiration) when is_binary(Value), is_integer(Expiration) ->
 	Key = package_key(Key0),
-    call(map_key(Key), {add, Key, Value, Expiration}, ?TIMEOUT).
+	call(map_key(Key), {add, Key, Value, Expiration}, ?TIMEOUT).
 
 set(Key, Value) ->
 	set(Key, Value, 0).
@@ -117,6 +145,13 @@ set(Key, Value) ->
 set(Key0, Value, Expiration) when is_binary(Value), is_integer(Expiration) ->
 	Key = package_key(Key0),
     call(map_key(Key), {set, Key, Value, Expiration}, ?TIMEOUT).
+
+cas(Key, Value, CAS) ->
+	cas(Key, Value, CAS, 0).
+
+cas(Key0, Value, CAS, Expiration) when is_binary(Value), is_integer(CAS), is_integer(Expiration) ->
+	Key = package_key(Key0),
+    call(map_key(Key), {cas, Key, Value, CAS, Expiration}, ?TIMEOUT).
     
 replace(Key, Value) ->
 	replace(Key, Value, 0).
