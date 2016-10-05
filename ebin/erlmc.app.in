@@ -7,7 +7,7 @@ cat > ebin/erlmc.app << EOF
 {application, erlmc,
  [{description, "Erlang binary protocol memcached client"},
   {vsn, "${VERSION}"},
-  {modules, [erlmc]},
+  {modules, [${MODULES}]},
   {registered, []},
   {applications, [kernel, stdlib]}
 ]}.
