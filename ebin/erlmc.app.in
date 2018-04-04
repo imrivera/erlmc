@@ -9,6 +9,7 @@ cat > ebin/erlmc.app << EOF
   {vsn, "${VERSION}"},
   {modules, [${MODULES}]},
   {registered, []},
-  {applications, [kernel, stdlib]}
+  {applications, [kernel, stdlib]},
+  {env, [{socket_options, []}, {recv_timeout, infinity}]}
 ]}.
 EOF

@@ -11,5 +11,5 @@
                   inets
                  ]},
   {mod, { erlmc, []}},
-  {env, []}
+  {env, [{socket_options, []}, {recv_timeout, infinity}]}
  ]}.

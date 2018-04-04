@@ -50,7 +50,8 @@ start_link([Host, Port]) ->
 %% @hidden
 %%--------------------------------------------------------------------
 init([Host, Port]) ->
-	case gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, false}]) of
+	SocketAdditionalOptions = application:get_env(erlmc, socket_options, []),
+	case gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, false} | SocketAdditionalOptions]) of
         {ok, Socket} -> 
 			{ok, Socket};
         Error -> 
@@ -316,7 +317,8 @@ decode_response_body(Bin, ExtrasSize, KeySize, Resp) ->
 
 recv_bytes(_, 0) -> <<>>;
 recv_bytes(Socket, NumBytes) ->
-    case gen_tcp:recv(Socket, NumBytes) of
+    Timeout = application:get_env(erlmc, recv_timeout, infinity),
+    case gen_tcp:recv(Socket, NumBytes, Timeout) of
         {ok, Bin} -> Bin;
         Err -> Err
     end.
