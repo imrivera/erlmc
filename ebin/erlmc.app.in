@@ -10,6 +10,6 @@ cat > ebin/erlmc.app << EOF
   {modules, [${MODULES}]},
   {registered, []},
   {applications, [kernel, stdlib]},
-  {env, [{socket_options, []}, {recv_timeout, infinity}]}
+  {env, [{socket_options, []}, {recv_timeout, infinity}, {connect_timeout, infinity}]}
 ]}.
 EOF

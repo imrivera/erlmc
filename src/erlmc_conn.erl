@@ -50,8 +50,9 @@ start_link([Host, Port]) ->
 %% @hidden
 %%--------------------------------------------------------------------
 init([Host, Port]) ->
-	SocketAdditionalOptions = application:get_env(erlmc, socket_options, []),
-	case gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, false} | SocketAdditionalOptions]) of
+	SocketOptions = application:get_env(erlmc, socket_options, []),
+    ConnectTimeout = application:get_env(erlmc, connect_timeout, infinity),
+	case gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, false} | SocketOptions], ConnectTimeout) of
         {ok, Socket} -> 
 			{ok, Socket};
         Error -> 
